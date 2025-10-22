@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>iDream — Suivi financier</title>
+  <meta name="description" content="Tableau de bord financier iDream — PWA pour la comptable" />
+  <meta name="theme-color" content="#6A0DAD" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- jsPDF pour export PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">iDream</div>
+        <div class="subtitle">Finance</div>
+      </div>
+      <nav>
+        <ul>
+          <li class="active" data-target="dashboard">Tableau de bord</li>
+          <li data-target="transactions">Transactions</li>
+          <li data-target="categories">Catégories</li>
+          <li data-target="reports">Rapports</li>
+          <li data-target="settings">Paramètres</li>
+        </ul>
+      </nav>
+      <footer class="sidebar-footer">iDream · Suivi financier</footer>
+    </aside>
+
+    <!-- Contenu principal -->
+    <main class="main">
+      <header class="topbar">
+        <div class="search">
+          <input id="searchInput" placeholder="Recherche par description, client ou montant..." />
+        </div>
+        <div class="actions">
+          <button id="installBtn" class="btn">Installer</button>
+          <button id="exportPdfBtn" class="btn">Exporter PDF</button>
+        </div>
+      </header>
+
+      <!-- === TABLEAU DE BORD === -->
+      <section id="dashboard" class="page page-active">
+        <h1>Tableau de bord</h1>
+        <div class="cards">
+          <div class="card metric">
+            <div class="card-title">Chiffre d'affaires</div>
+            <div class="card-value" id="revenueMonth">0</div>
+            <div class="card-meta" id="revenueChange">—</div>
+          </div>
+          <div class="card metric">
+            <div class="card-title">Dépenses</div>
+            <div class="card-value" id="expensesMonth">0</div>
+            <div class="card-meta" id="expensesChange">—</div>
+          </div>
+          <div class="card metric">
+            <div class="card-title">Bénéfice net</div>
+            <div class="card-value" id="netProfit">0</div>
+            <div class="card-meta" id="profitMargin">—</div>
+          </div>
+          <div class="card metric">
+            <div class="card-title">Marge bénéficiaire</div>
+            <div class="card-value" id="marginPercent">0%</div>
+          </div>
+        </div>
+
+        <div class="charts">
+          <div class="chart-card">
+            <canvas id="revExpChart"></canvas>
+          </div>
+          <div class="chart-card small">
+            <canvas id="expensePie"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- === TRANSACTIONS === -->
+      <section id="transactions" class="page" hidden>
+        <h1>Transactions</h1>
+        <form id="txForm" class="tx-form">
+          <div class="form-row">
+            <label>Type</label>
+            <select id="txType">
+              <option value="revenue">Revenu</option>
+              <option value="expense">Dépense</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Montant</label>
+            <input id="txAmount" type="number" min="0" step="0.01" required />
+          </div>
+          <div class="form-row">
+            <label>Catégorie</label>
+            <select id="txCategory"></select>
+          </div>
+          <div class="form-row">
+            <label>Date</label>
+            <input id="txDate" type="date" required />
+          </div>
+          <div class="form-row">
+            <label>Client</label>
+            <input id="txClient" placeholder="Nom du client (si revenu)" />
+          </div>
+          <div class="form-row">
+            <label>Description</label>
+            <input id="txDesc" placeholder="Ex: Vente kiosque matin" />
+          </div>
+          <div class="form-row actions-row">
+            <button class="btn primary" type="submit">Ajouter</button>
+            <button id="resetForm" type="button" class="btn">Réinitialiser</button>
+          </div>
+        </form>
+
+        <div class="tables">
+          <div class="table-panel">
+            <h2>Dépenses</h2>
+            <table id="expensesTable" class="data-table">
+              <thead><tr><th>Date</th><th>Catégorie</th><th>Description</th><th>Montant</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="table-panel">
+            <h2>Revenus</h2>
+            <table id="revenuesTable" class="data-table">
+              <thead><tr><th>Date</th><th>Client</th><th>Description</th><th>Montant</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- === CATÉGORIES === -->
+      <section id="categories" class="page" hidden>
+        <h1>Catégories</h1>
+        <form id="catForm" class="cat-form">
+          <div class="form-row">
+            <label>Nom</label>
+            <input id="catName" required />
+          </div>
+          <div class="form-row">
+            <label>Couleur</label>
+            <input id="catColor" type="color" value="#8A2BE2" />
+          </div>
+          <div class="form-row actions-row">
+            <button type="submit" class="btn primary">Ajouter</button>
+            <button id="clearCats" type="button" class="btn">Réinitialiser</button>
+          </div>
+        </form>
+        <div id="catList" class="cat-list"></div>
+      </section>
+
+      <!-- === RAPPORTS === -->
+      <section id="reports" class="page" hidden>
+        <h1>Rapports & Analyse</h1>
+        <div class="report-controls">
+          <label>Période
+            <select id="reportPeriod">
+              <option value="month">Mois</option>
+              <option value="quarter">Trimestre</option>
+              <option value="year">Année</option>
+            </select>
+          </label>
+          <label>Catégorie
+            <select id="reportCategory"><option value="all">Toutes</option></select>
+          </label>
+          <button id="btnGenerate" class="btn primary">Générer</button>
+        </div>
+        <div id="reportOutput" class="report-output"></div>
+      </section>
+
+      <!-- === PARAMÈTRES === -->
+      <section id="settings" class="page" hidden>
+        <h1>Paramètres</h1>
+        <div class="settings-grid">
+          <label>Thème
+            <select id="themeSelect">
+              <option value="light">Clair</option>
+              <option value="dark">Sombre</option>
+            </select>
+          </label>
+          <button id="clearAll" class="btn danger">Supprimer toutes les données</button>
+        </div>
+      </section>
+
+      <footer class="footer">© iDream — Dashboard Financier</footer>
+    </main>
+  </div>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
