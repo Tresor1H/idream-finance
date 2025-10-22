@@ -54,4 +54,3 @@ Deux approches :
 - Si tu veux, j'ajoute le support d'import CSV/Excel, ou export PDF réel.
 
 ## Contact
-Pour intégration, ajustements visuels ou export PDF réel — dis-moi les priorités et
